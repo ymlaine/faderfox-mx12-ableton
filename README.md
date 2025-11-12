@@ -125,9 +125,6 @@ A professional Ableton Live Remote Script for the Faderfox MX12 MIDI controller,
 ```bash
 # Copy the RemoteScript folder
 cp -r RemoteScript/src ~/Library/Preferences/Ableton/Live\ X.X.X/User\ Remote\ Scripts/FaderfoxMX12byYVMA
-
-# Or via iCloud (if syncing preferences)
-cp -r RemoteScript/src ~/Library/Mobile\ Documents/com~apple~CloudDocs/Music/Ableton/My\ Ableton\ Presets/User\ Library/Remote\ Scripts/FaderfoxMX12byYVMA
 ```
 
 #### Windows
