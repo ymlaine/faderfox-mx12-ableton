@@ -6,7 +6,7 @@ Change values and reload script (Cmd+O → Enter) to test different settings.
 """
 
 # === BASIC SETTINGS ===
-TRACK_MARKER = "%"
+TRACK_MARKER = "|"
 TRACKS_PER_PAGE = 12
 SHOW_MESSAGES = True
 LOG_LEVEL = 1

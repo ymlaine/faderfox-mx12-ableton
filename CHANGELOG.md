@@ -5,24 +5,28 @@ All notable changes to the Faderfox MX12 Control Surface will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - 2025-01-11
+## [3.0.0] - 2025-01-12
 
 ### Added
-- **Smart page filling system**: %1-%8 tracks fill pages first, then % tracks fill remaining slots
-- **%0 = % equivalence**: Tracks with %0 suffix treated as % (filler group)
-- **Fallback mode**: If no %x tracks, fill all 8 pages with % tracks only
-- **Intuitive scroll indicator**: 1 LED = 1 hidden track, directional (left/right)
-- **Visual feedback**: 2-second LED display showing scroll position
+- **Smart page filling system**: |1-|8 tracks fill pages first, then | tracks fill remaining slots
+- **|0 = | equivalence**: Tracks with |0 suffix treated as | (filler group)
+- **Fallback mode**: If no |x tracks, fill all 8 pages with | tracks only
+- **Scroll depth indicator**: LEDs fill right-to-left showing scroll position from start
+- **Visual feedback**: 2-second LED display (1 LED = 1 track scrolled, max 12)
 
 ### Changed
+- **BREAKING**: Track marker changed from `%` to `|` for better visibility
 - **BREAKING**: Complete refactor of page organization system
 - Pages now filled intelligently based on track suffixes
-- % tracks distributed across pages in order of appearance
+- | tracks distributed across pages in order of appearance
+- Page positioning system using `_page_start_positions` for accurate overflow handling
 
 ### Fixed
 - LED persistence when switching display modes
 - LEDs not updating during scroll indicator display
 - LEDs remaining lit in LOCKS mode
+- Scroll indicator direction bug (now shows depth from start, not left/right)
+- Page overflow bug where tracks with >12 items appeared on next page
 
 ## [2.9.x] - Development Versions
 
@@ -87,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial Faderfox MX12 support
 - Basic rack device mapping (Macro 1-3)
-- Multi-page organization (%0-%8)
+- Multi-page organization (|0-|8)
 - Track locking system
 - Preview mode
 - Activity LED monitoring (polling-based)
@@ -98,13 +102,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 3.0.0 Migration
 **Track organization has changed**. If you upgrade from 2.x:
-1. Check track suffixes (use %1-%8 for dedicated pages, % for fillers)
+1. Check track suffixes (use |1-|8 for dedicated pages, | for fillers)
 2. Pages will reorganize on next script load
 3. Locked tracks (virtual page) are preserved
 
 ### 2.0.0 Migration
 **Architecture changed from polling to listeners**:
-1. Audio tracks: Add `%` suffix for automatic VU monitoring
+1. Audio tracks: Add `|` suffix for automatic VU monitoring
 2. MIDI tracks: Add M4L device `MX12byYVMA.amxd`
 3. Performance improvement: ~99% less MIDI traffic
 

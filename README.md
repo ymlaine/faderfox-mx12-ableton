@@ -19,14 +19,14 @@ A professional Ableton Live Remote Script for the Faderfox MX12 MIDI controller,
 - **Pickup Mode**: Prevents parameter jumps when moving controls
 
 ### Organization System
-- **Smart Page System**: Organize tracks with `%1` to `%8` suffixes
-- **Flexible Filling**: Generic `%` tracks fill empty slots automatically
+- **Smart Page System**: Organize tracks with `|1` to `|8` suffixes
+- **Flexible Filling**: Generic `|` tracks fill empty slots automatically
 - **8 Pages × 12 Tracks**: Up to 96 tracks accessible
 - **Virtual Page (LOCKS)**: Create custom track collections across pages
 
 ### Workflow Features
 - **Track Locking**: Keep important tracks visible across page changes
-- **Scroll Indicator**: Visual feedback showing hidden tracks (2-second display)
+- **Scroll Indicator**: Visual depth gauge showing scroll position (2-second display)
 - **Preview Mode**: Try parameter changes, instantly revert
 - **Recording Control**: Quick recording start/stop with LED indicator
 - **Activity LEDs**: Real-time audio/MIDI activity monitoring
@@ -160,7 +160,7 @@ cp -r RemoteScript/src ~/.local/share/Ableton/Live/User\ Remote\ Scripts/Faderfo
 2. In Ableton, drag the device onto **MIDI tracks** you want to control
 3. The device monitors MIDI activity and exposes a `midi_active` parameter
 
-**Note**: Audio tracks with `%` suffix work automatically via VU meters (no M4L device needed)
+**Note**: Audio tracks with `|` suffix work automatically via VU meters (no M4L device needed)
 
 ---
 
@@ -171,18 +171,18 @@ cp -r RemoteScript/src ~/.local/share/Ableton/Live/User\ Remote\ Scripts/Faderfo
 Add suffixes to track names to organize them into pages:
 
 ```
-Bass%1          → Page 1 (Button 1)
-Drums%1         → Page 1
-Lead%2          → Page 2 (Button 2)
-Pads%2          → Page 2
-FX%             → Filler track (fills empty slots)
-Utility%        → Filler track
+Bass|1          → Page 1 (Button 1)
+Drums|1         → Page 1
+Lead|2          → Page 2 (Button 2)
+Pads|2          → Page 2
+FX|             → Filler track (fills empty slots)
+Utility|        → Filler track
 ```
 
 **Smart Filling Rules**:
-- `%1` to `%8` = Dedicated pages (priority)
-- `%` or `%0` = Filler tracks (auto-distributed)
-- Pages with < 12 tracks are filled with `%` tracks
+- `|1` to `|8` = Dedicated pages (priority)
+- `|` or `|0` = Filler tracks (auto-distributed)
+- Pages with < 12 tracks are filled with `|` tracks
 - Pages with ≥ 12 tracks are scrollable (no filling)
 
 ### 2. Create Racks
@@ -223,15 +223,16 @@ Create a custom collection of tracks from any page:
 
 ### Scroll Position Indicator
 
-When scrolling with the encoder, LEDs show position for 2 seconds:
+When scrolling with the encoder, LEDs show scroll depth for 2 seconds:
 
 ```
-[🟢🟢🟢⚫⚫⚫][⚫⚫⚫⚫⚫⚫]
-  LEFT      RIGHT
+Offset 0: [⚫⚫⚫⚫⚫⚫][⚫⚫⚫⚫⚫⚫]  At start position
+Offset 1: [⚫⚫⚫⚫⚫⚫][⚫⚫⚫⚫⚫🟢]  1 track deep
+Offset 3: [⚫⚫⚫⚫⚫⚫][⚫⚫⚫🟢🟢🟢]  3 tracks deep
+Offset 6: [⚫⚫⚫⚫⚫⚫][🟢🟢🟢🟢🟢🟢]  6 tracks deep
 
-Left LEDs (0-5) = Tracks hidden on the left (before view)
-Right LEDs (6-11) = Tracks hidden on the right (after view)
-1 LED = 1 hidden track (max 6 per side)
+LEDs fill from RIGHT to LEFT showing scroll depth from start
+1 LED = 1 track scrolled (max 12)
 ```
 
 ### Preview Mode
@@ -252,7 +253,7 @@ Test parameter changes without committing:
 
 ### Activity LEDs
 
-- **Audio tracks** with `%` suffix: VU meter monitoring (automatic)
+- **Audio tracks** with `|` suffix: VU meter monitoring (automatic)
 - **MIDI tracks**: Requires M4L device `MX12byYVMA.amxd`
 - **Red LEDs (0-10)**: ON when track has activity
 
@@ -271,10 +272,10 @@ Ensure your MX12 is configured to send:
 
 | Pattern | Behavior | Example |
 |---------|----------|---------|
-| `TrackName%1` | Page 1 priority | `Bass%1` |
-| `TrackName%2` to `%8` | Pages 2-8 priority | `Drums%2` |
-| `TrackName%` | Filler track | `FX%` |
-| `TrackName%0` | Same as `%` | `Utility%0` |
+| `TrackName|1` | Page 1 priority | `Bass|1` |
+| `TrackName|2` to `|8` | Pages 2-8 priority | `Drums|2` |
+| `TrackName|` | Filler track | `FX|` |
+| `TrackName|0` | Same as `|` | `Utility|0` |
 
 ### Pickup Mode
 
@@ -292,36 +293,36 @@ PICKUP_THRESHOLD = 0.02  # 2% threshold
 ### Example 1: Mixed Groups + Fillers
 ```
 Tracks:
-- 8 tracks %1 (Drums)
-- 15 tracks %2 (Synths)
-- 10 tracks % (FX, Utility)
+- 8 tracks |1 (Drums)
+- 15 tracks |2 (Synths)
+- 10 tracks | (FX, Utility)
 
 Result:
-Page 1: 8 tracks %1 + 4 tracks % = 12 slots filled
-Page 2: 15 tracks %2 (scrollable, 3 extra hidden)
-Page 3: 6 tracks % + 6 empty = 12 slots
+Page 1: 8 tracks |1 + 4 tracks | = 12 slots filled
+Page 2: 15 tracks |2 (scrollable, 3 extra hidden)
+Page 3: 6 tracks | + 6 empty = 12 slots
 Pages 4-8: Empty
 ```
 
 ### Example 2: Only Filler Tracks
 ```
 Tracks:
-- 30 tracks % (all generic)
+- 30 tracks | (all generic)
 
 Result:
-Page 1: tracks % 1-12
-Page 2: tracks % 13-24
-Page 3: tracks % 25-30 + 6 empty
+Page 1: tracks | 1-12
+Page 2: tracks | 13-24
+Page 3: tracks | 25-30 + 6 empty
 Pages 4-8: Empty
 ```
 
 ### Example 3: Overflowing Groups
 ```
 Tracks:
-- 20 tracks %1
+- 20 tracks |1
 
 Result:
-Page 1: 20 tracks %1 (scrollable within page)
+Page 1: 20 tracks |1 (scrollable within page)
 - Use encoder to scroll through tracks 1-20
 - No filler tracks added
 ```
@@ -351,7 +352,7 @@ Page 1: 20 tracks %1 (scrollable within page)
 
 ### Activity LEDs Not Working
 
-- **Audio tracks**: Add `%` suffix to track name
+- **Audio tracks**: Add `|` suffix to track name
 - **MIDI tracks**: Drop `MX12byYVMA.amxd` device on track
 - Check Log.txt for listener errors
 
@@ -389,9 +390,9 @@ Page 1: 20 tracks %1 (scrollable within page)
 
 ### v3.0.0 (Current)
 - **Major**: Smart page filling system
-- `%0` treated as `%` (equivalent)
-- Pages filled with %1-%8 tracks first, then % tracks
-- Fallback: If no %x tracks, fill pages with % only
+- `|0` treated as `|` (equivalent)
+- Pages filled with |1-|8 tracks first, then | tracks
+- Fallback: If no |x tracks, fill pages with | only
 
 ### v2.9.9
 - Intuitive scroll indicator (1 LED = 1 hidden track)

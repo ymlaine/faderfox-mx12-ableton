@@ -2,7 +2,7 @@
 Faderfox MX12 Custom Control Surface - LISTENER VERSION
 ---------------------------------------------------------------------------
 Activity detection priority:
-1. Audio tracks with '%' → VU meter listener (output_meter_level)
+1. Audio tracks with '|' → VU meter listener (output_meter_level)
 2. MIDI tracks → M4L device parameter listener (midi_active)
 3. Fallback → VU meter for MIDI tracks without M4L (instruments with audio output)
 
@@ -16,7 +16,7 @@ import Live
 from _Framework.ControlSurface import ControlSurface
 from . import config
 
-VERSION = "3.0.0"  # Major: Smart page filling - %0=%  + %1-%8 priority + % tracks as filler
+VERSION = "3.0.0"  # Major: Smart page filling - |0=|  + |1-|8 priority + | tracks as filler
 
 
 class FaderfoxMX12byYVMA(ControlSurface):
@@ -35,6 +35,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
         # Groups and pages (Phase 1)
         self._track_groups = {}  # {group_id: [tracks...]}
         self._all_tracks_padded = []  # Linear list with None for padding
+        self._page_start_positions = []  # Start position of each page in _all_tracks_padded
         self._current_page = 0  # Current page for LED display (0-7)
         self._scroll_offset = 0  # Track offset for track-by-track scrolling (Phase 4)
         self._page_scroll_offset = 0  # LOCAL scroll within current page (respects locks)
@@ -846,13 +847,12 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
     def _change_page(self, page_idx):
         """Change to specified page (0-7) - jumps to page start"""
-        # Calculate total pages from padded list
-        num_pages = len(self._all_tracks_padded) // 12 if self._all_tracks_padded else 0
+        # Check if page index is valid
+        num_pages = len(self._page_start_positions)
 
-        # Limit to 8 pages max
-        if page_idx >= min(num_pages, self.NUM_PAGES) or page_idx < 0:
+        if page_idx >= num_pages or page_idx < 0:
             self.log_message("Page {} IGNORED (out of range 0-{})".format(
-                page_idx, min(num_pages, self.NUM_PAGES) - 1
+                page_idx, num_pages - 1
             ))
             return
 
@@ -863,12 +863,12 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         self.log_message("Changing to page {} (was {})".format(page_idx, self._current_page))
         self._current_page = page_idx
-        # Sync scroll offset to page start (Phase 4)
-        self._scroll_offset = page_idx * self.NUM_TRACKS
+        # Use actual page start position from _page_start_positions
+        self._scroll_offset = self._page_start_positions[page_idx]
         # Reset local scroll when changing page
         self._page_scroll_offset = 0
 
-        self.show_message("Page {}/{}".format(page_idx + 1, min(num_pages, self.NUM_PAGES)))
+        self.show_message("Page {}/{}".format(page_idx + 1, num_pages))
         # Update green LEDs immediately (update_display will continue updating for blinks)
         self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
         self._map_current_page()
@@ -927,16 +927,16 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         Returns:
             None: Track not in MX12 system
-            0: Track with '%' or '%0' (default/fill group)
-            1-8: Track with '%1' to '%8'
+            0: Track with '|' or '|0' (default/fill group)
+            1-8: Track with '|1' to '|8'
         """
-        if track_name.endswith('%'):
+        if track_name.endswith('|'):
             return 0
 
-        match = re.search(r'%(\d+)$', track_name)
+        match = re.search(r'\|(\d+)$', track_name)
         if match:
             group_num = int(match.group(1))
-            # %0 is treated as % (group 0)
+            # |0 is treated as | (group 0)
             if group_num == 0:
                 return 0
             return group_num if 1 <= group_num <= 8 else None
@@ -947,15 +947,16 @@ class FaderfoxMX12byYVMA(ControlSurface):
         """Scan tracks and organize into groups with smart page filling
 
         New logic:
-        1. %0 = % (equivalent)
-        2. Pages 0-7 filled with %1-%8 tracks first (priority)
-        3. If page has < 12 tracks, fill with % tracks (in order)
+        1. |0 = | (equivalent)
+        2. Pages 0-7 filled with |1-|8 tracks first (priority)
+        3. If page has < 12 tracks, fill with | tracks (in order)
         4. If page has >= 12 tracks, no filling (scroll within page)
-        5. If no %x tracks, fill pages with % tracks only
+        5. If no |x tracks, fill pages with | tracks only
         """
         # Reset structures
         self._track_groups = {}
         self._all_tracks_padded = []
+        self._page_start_positions = []
         self._filtered_tracks = []  # Legacy, keep for compatibility
 
         # Parse all tracks and organize by group
@@ -972,7 +973,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
                 self._track_groups[group_id].append(track)
                 self._filtered_tracks.append(track)  # Legacy
 
-        # Get group 0 tracks (% and %0) for filling
+        # Get group 0 tracks (| and |0) for filling
         fill_tracks = self._track_groups.get(0, [])
         fill_index = 0  # Track position in fill_tracks list
 
@@ -981,16 +982,20 @@ class FaderfoxMX12byYVMA(ControlSurface):
         has_numbered_groups = any(gid >= 1 for gid in self._track_groups.keys())
 
         if has_numbered_groups:
-            # Mode 1: %1-%8 groups exist → fill each page with %x first, then % tracks
+            # Mode 1: |1-|8 groups exist → fill each page with |x first, then | tracks
             for page_num in range(8):
-                page_group_id = page_num + 1  # Page 0 = group %1, Page 1 = group %2, etc.
+                # Record start position of this page
+                page_start_pos = len(self._all_tracks_padded)
+                self._page_start_positions.append(page_start_pos)
+
+                page_group_id = page_num + 1  # Page 0 = group |1, Page 1 = group |2, etc.
                 page_tracks = self._track_groups.get(page_group_id, [])
 
-                # Add %x tracks first
+                # Add |x tracks first
                 self._all_tracks_padded.extend(page_tracks)
                 total_tracks += len(page_tracks)
 
-                # Fill remaining slots (up to 12) with % tracks if available
+                # Fill remaining slots (up to 12) with | tracks if available
                 if len(page_tracks) < 12:
                     slots_needed = 12 - len(page_tracks)
                     slots_filled = 0
@@ -1001,13 +1006,13 @@ class FaderfoxMX12byYVMA(ControlSurface):
                         slots_filled += 1
                         total_tracks += 1
 
-                    # Pad remaining slots with None if no more % tracks
+                    # Pad remaining slots with None if no more | tracks
                     if slots_filled < slots_needed:
                         padding_needed = slots_needed - slots_filled
                         self._all_tracks_padded.extend([None] * padding_needed)
 
                     self.log_message(
-                        "Page {}: {} %{} tracks + {} % tracks (filled to 12)".format(
+                        "Page {}: {} |{} tracks + {} | tracks (filled to 12)".format(
                             page_num, len(page_tracks), page_group_id, slots_filled
                         )
                     )
@@ -1018,21 +1023,25 @@ class FaderfoxMX12byYVMA(ControlSurface):
                         padding_needed = 12 - remainder
                         self._all_tracks_padded.extend([None] * padding_needed)
                         self.log_message(
-                            "Page {}: {} %{} tracks (scrollable, padded with {})".format(
+                            "Page {}: {} |{} tracks (scrollable, padded with {})".format(
                                 page_num, len(page_tracks), page_group_id, padding_needed
                             )
                         )
                     else:
                         self.log_message(
-                            "Page {}: {} %{} tracks (scrollable)".format(
+                            "Page {}: {} |{} tracks (scrollable)".format(
                                 page_num, len(page_tracks), page_group_id
                             )
                         )
 
         else:
-            # Mode 2: No %x groups → fill pages with % tracks only (12 per page)
+            # Mode 2: No |x groups → fill pages with | tracks only (12 per page)
             page_num = 0
             while fill_index < len(fill_tracks) and page_num < 8:
+                # Record start position of this page
+                page_start_pos = len(self._all_tracks_padded)
+                self._page_start_positions.append(page_start_pos)
+
                 page_tracks_slice = fill_tracks[fill_index:fill_index + 12]
                 self._all_tracks_padded.extend(page_tracks_slice)
                 total_tracks += len(page_tracks_slice)
@@ -1043,7 +1052,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
                     self._all_tracks_padded.extend([None] * padding_needed)
 
                 self.log_message(
-                    "Page {}: {} % tracks (filled from % pool)".format(
+                    "Page {}: {} | tracks (filled from | pool)".format(
                         page_num, len(page_tracks_slice)
                     )
                 )
@@ -1051,7 +1060,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
                 fill_index += len(page_tracks_slice)
                 page_num += 1
 
-        num_pages = len(self._all_tracks_padded) // 12
+        num_pages = len(self._page_start_positions)
         self.log_message(
             "Scan complete: {} tracks, {} groups, {} pages".format(
                 total_tracks, len(self._track_groups), num_pages
@@ -1076,7 +1085,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         Mode 'page':
             Returns tracks from current page (normal behavior)
-            Example: [Track1%2, Track2%2, Track3%2, ...]
+            Example: [Track1|2, Track2|2, Track3|2, ...]
         """
         if self._display_mode == 'locks':
             # LOCKS mode: return locked tracks in order of addition
@@ -1374,7 +1383,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
             # Check activity based on track type
             is_audio = self._is_audio_track(track)
 
-            if is_audio and track.name.endswith('%'):
+            if is_audio and track.name.endswith('|'):
                 # Audio track - read VU meter
                 try:
                     level = max(track.output_meter_left, track.output_meter_right)
@@ -1418,15 +1427,15 @@ class FaderfoxMX12byYVMA(ControlSurface):
         """Add appropriate listener based on track type
 
         Priority order:
-        1. Audio tracks with '%' → VU meter listener
+        1. Audio tracks with '|' → VU meter listener
         2. MIDI tracks → Try M4L device listener
         3. Fallback → VU meter (MIDI tracks with instruments generate audio)
         """
         # First check if it's a real audio track (has VU meters)
         is_audio = self._is_audio_track(track)
 
-        # Audio track with '%' → VU meter listener
-        if is_audio and track.name.endswith('%'):
+        # Audio track with '|' → VU meter listener
+        if is_audio and track.name.endswith('|'):
             try:
                 # Audio track - listen to output_meter_level
                 # Use closure to capture current values (not references)
@@ -1442,7 +1451,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
             except:
                 pass
         else:
-            # MIDI track or audio without '%' → Try M4L device first
+            # MIDI track or audio without '|' → Try M4L device first
             device = self._find_m4l_device(track)
             if device:
                 # M4L device found → Use parameter listener
@@ -1591,7 +1600,17 @@ class FaderfoxMX12byYVMA(ControlSurface):
         """Find which page a track originally belongs to (without locks)"""
         for idx, t in enumerate(self._all_tracks_padded):
             if t is not None and id(t) == id(track):
-                return idx // 12  # Page index
+                # Find which page this index belongs to using _page_start_positions
+                for page_idx in range(len(self._page_start_positions)):
+                    page_start = self._page_start_positions[page_idx]
+                    # Last page check
+                    if page_idx == len(self._page_start_positions) - 1:
+                        if idx >= page_start:
+                            return page_idx
+                    else:
+                        page_end = self._page_start_positions[page_idx + 1]
+                        if page_start <= idx < page_end:
+                            return page_idx
         return None
 
     def _force_resync_green_leds(self):
@@ -1643,60 +1662,46 @@ class FaderfoxMX12byYVMA(ControlSurface):
     def _update_scroll_position_indicator(self):
         """Show scroll position indicator on green LEDs for 2 seconds after scrolling
 
-        Intuitive visualization: 1 LED = 1 hidden track
-        - LEDs 0-5 (LEFT) = tracks hidden to the LEFT (before current view)
-        - LEDs 6-11 (RIGHT) = tracks hidden to the RIGHT (after current view)
-        - All LEDs OFF = viewing at correct position, no hidden tracks
+        Depth indicator visualization: Shows how deep you scrolled from start
+        - LEDs fill from RIGHT to LEFT (11 → 0) to show scroll depth
+        - 1 LED = 1 track scrolled from start position
+        - All LEDs OFF = at start position (offset 0)
 
-        Example with 24 tracks:
-        - Offset 0 (viewing 1-12): All OFF (no hidden tracks on left, 12 on right but outside view)
-        - Offset 3 (viewing 4-15): LEDs 0-2 ON (3 tracks hidden on left), LEDs 6-11 ON (9 tracks hidden on right)
-        - Offset 12 (viewing 13-24): LEDs 0-5 ON (6 shown max), All right OFF (no more tracks)
+        Example with 24 tracks in group:
+        - Scroll offset 0 (viewing 1-12): All OFF (at start)
+        - Scroll offset 1 (viewing 2-13): LED 11 ON (1 track deep)
+        - Scroll offset 3 (viewing 4-15): LEDs 9,10,11 ON (3 tracks deep)
+        - Scroll offset 12 (viewing 13-24): All 12 LEDs ON (12 tracks deep)
 
         IMPORTANT: Forces ALL LEDs to update (ignores cache) to ensure clean display
         """
-        # Get total tracks and current view range
+        # Get scroll offset (how deep we are from start)
         if self._display_mode == 'locks':
-            total_tracks = len(self._locked_tracks)
+            offset = self._page_scroll_offset
         else:
-            # Count non-None tracks in current page group
-            page_start = self._scroll_offset
-            total_tracks = 0
-            for i in range(page_start, len(self._all_tracks_padded)):
-                if self._all_tracks_padded[i] is None:
-                    break
-                total_tracks += 1
+            offset = self._page_scroll_offset
 
-        if total_tracks <= self.NUM_TRACKS:
-            # All tracks visible, nothing to indicate - turn all OFF
+        # If at start position, turn all OFF
+        if offset == 0:
             for i in range(12):
                 cc_num = 36 + i
                 self._send_midi((0xB0 | self._midi_channel, cc_num, 0))
                 self._page_led_states[i] = 0
             return
 
-        # Calculate how many tracks are hidden on each side
-        offset = self._page_scroll_offset
-        hidden_left = offset  # Tracks before current view
-        hidden_right = max(0, total_tracks - (offset + self.NUM_TRACKS))  # Tracks after current view
-
-        # Limit to 6 LEDs max per side
-        leds_left = min(hidden_left, 6)
-        leds_right = min(hidden_right, 6)
+        # Calculate how many LEDs to light (max 12)
+        num_leds = min(offset, 12)
 
         # FORCE UPDATE: Set all LEDs
+        # Fill from RIGHT to LEFT (LED 11, 10, 9... down to 0)
         for i in range(12):
             cc_num = 36 + i
             new_value = 0  # Default: OFF
 
-            if i < 6:
-                # LEFT side (LEDs 0-5): Show hidden tracks on left
-                if i < leds_left:
-                    new_value = 127  # ON
-            else:
-                # RIGHT side (LEDs 6-11): Show hidden tracks on right
-                if (i - 6) < leds_right:
-                    new_value = 127  # ON
+            # Light LEDs from right (11) to left (0)
+            # Example: offset=3 → LEDs 11, 10, 9 ON
+            if i >= (12 - num_leds):
+                new_value = 127  # ON
 
             # FORCE UPDATE: Always send MIDI (ignore cache)
             self._send_midi((0xB0 | self._midi_channel, cc_num, new_value))
