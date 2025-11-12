@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **BREAKING**: Track marker changed from `%` to `|` for better visibility
 - **BREAKING**: Complete refactor of page organization system
+- **BREAKING**: Renamed "LOCKS" terminology to "PINS" for better clarity
+  - Virtual page mode now called "PINS mode" (was "LOCKS mode")
+  - Track pinning/unpinning (was lock/unlock)
+  - `_pinned_tracks` variable (was `_locked_tracks`)
+  - More intuitive terminology: "pin a track" vs "lock a track"
 - Pages now filled intelligently based on track suffixes
 - | tracks distributed across pages in order of appearance
 - Page positioning system using `_page_start_positions` for accurate overflow handling
@@ -24,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - LED persistence when switching display modes
 - LEDs not updating during scroll indicator display
-- LEDs remaining lit in LOCKS mode
+- LEDs remaining lit in PINS mode
 - Scroll indicator direction bug (now shows depth from start, not left/right)
 - Page overflow bug where tracks with >12 items appeared on next page
 
@@ -48,8 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [2.9.5] - 2025-11-11
 - Differentiated LED blink patterns
-  - FAST BLINK (2.5Hz): Virtual page tracks not on current page
-  - SLOW BLINK (1Hz): Virtual page + current page button (double function)
+  - FAST BLINK (2.5Hz): Pinned tracks not on current page
+  - SLOW BLINK (1Hz): Pinned track + current page button (double function)
 
 ### [2.9.4] - 2025-11-10
 - Virtual page membership LED indicator in PAGE mode
@@ -92,7 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial Faderfox MX12 support
 - Basic rack device mapping (Macro 1-3)
 - Multi-page organization (|0-|8)
-- Track locking system
+- Track pinning system (virtual page)
 - Preview mode
 - Activity LED monitoring (polling-based)
 
@@ -101,10 +106,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Migration Notes
 
 ### 3.0.0 Migration
-**Track organization has changed**. If you upgrade from 2.x:
-1. Check track suffixes (use |1-|8 for dedicated pages, | for fillers)
-2. Pages will reorganize on next script load
-3. Locked tracks (virtual page) are preserved
+**Track organization and terminology have changed**. If you upgrade from 2.x:
+1. **Terminology change**: "LOCKS" → "PINS"
+   - Virtual page mode is now called "PINS mode"
+   - CC 45 button is now "PIN" button (was "LOCK")
+   - Track collections are "pinned" (was "locked")
+   - Pinned tracks are preserved during upgrade
+2. **Track suffixes**: Use |1-|8 for dedicated pages, | for fillers
+3. Pages will reorganize on next script load based on new smart filling system
 
 ### 2.0.0 Migration
 **Architecture changed from polling to listeners**:

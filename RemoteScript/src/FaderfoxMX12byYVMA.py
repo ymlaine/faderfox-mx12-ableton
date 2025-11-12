@@ -46,12 +46,12 @@ class FaderfoxMX12byYVMA(ControlSurface):
         # Mappings
         self._mapped_params = {}
 
-        # Virtual page tracks (tracks added to virtual page, shown in LOCKS mode)
+        # Virtual page tracks (tracks added to virtual page, shown in PINS mode)
         # Changed from dict to list to preserve order and avoid slot index conflicts
-        self._locked_tracks = []  # List of track objects in order of addition
+        self._pinned_tracks = []  # List of track objects in order of addition
 
-        # Display mode (Phase X - Simplified locks view)
-        self._display_mode = 'page'  # 'page' or 'locks'
+        # Display mode (Phase X - Simplified pins view)
+        self._display_mode = 'page'  # 'page' or 'pins'
         self._last_cc45_press_time = 0  # For double-tap detection on CC 45
         self._last_cc44_press_time = 0  # For double-tap detection on CC 44 (recording)
 
@@ -64,7 +64,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         # Function buttons state (Phase 3 - momentary mode)
         # Note: _select_mode removed - track selection is now the default behavior for red buttons
-        self._lock_mode = False    # CC 45 - LOCK combo mode (hold)
+        self._pin_mode = False    # CC 45 - PIN combo mode (hold)
         self._snapshot_mode = False  # CC 46 - SNAPSHOT toggle mode (active/inactive)
         self._shift_mode = False   # CC 47 - SHIFT modifier (hold for alternate functions)
         self._recording_mode = False  # CC 44 - Recording toggle mode (arrangement + automation)
@@ -74,15 +74,15 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         # LEDs
         self._led_states = [0] * 12  # Red (activity)
-        self._page_led_states = [0] * 12  # Green (page/locks)
+        self._page_led_states = [0] * 12  # Green (page/pins)
         self._midi_channel = 0
 
-        # Blink counters for green LEDs (locks visualization)
-        # Fast: 2.5Hz (75% ON, 25% OFF) pour locked seul - attire attention
-        # Slow: 1Hz (90% ON, 10% OFF) pour page + locked - moins dérangeant
-        self._blink_fast_counter = 0  # 2.5Hz for locked slots (not on current page)
+        # Blink counters for green LEDs (pins visualization)
+        # Fast: 2.5Hz (75% ON, 25% OFF) pour pinned seul - attire attention
+        # Slow: 1Hz (90% ON, 10% OFF) pour page + pinned - moins dérangeant
+        self._blink_fast_counter = 0  # 2.5Hz for pinned slots (not on current page)
         self._blink_fast_state = True  # True = ON (75%), False = OFF (25%)
-        self._blink_slow_counter = 0  # 1Hz for page + locked (double function)
+        self._blink_slow_counter = 0  # 1Hz for page + pinned (double function)
         self._blink_slow_state = True  # True = ON (90%), False = OFF (10%)
 
         # Recording LED blink (red, slot 11) - 4Hz rapid blink
@@ -199,7 +199,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._handle_cc(data1, data2)
 
     def _handle_cc(self, cc_num, value):
-        # Red buttons (CC 24-35) - NEW: select track by default, lock when CC 45 held
+        # Red buttons (CC 24-35) - NEW: select track by default, pin when CC 45 held
         if 24 <= cc_num <= 35:
             slot_idx = cc_num - 24
 
@@ -207,9 +207,9 @@ class FaderfoxMX12byYVMA(ControlSurface):
                 self._force_resync_all_leds()
 
                 # Check which function mode is active
-                if self._lock_mode:
-                    # LOCK mode (CC 45 held): lock/unlock slot
-                    self._toggle_lock(slot_idx)
+                if self._pin_mode:
+                    # PIN mode (CC 45 held): pin/unpin slot
+                    self._toggle_pin(slot_idx)
                 else:
                     # DEFAULT behavior: select track in Ableton
                     self._select_track(slot_idx)
@@ -224,13 +224,13 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
                 page_idx = cc_num - 36
 
-                # Special behavior in LOCKS mode
-                if self._display_mode == 'locks':
-                    # Exit LOCKS mode and go to this page
+                # Special behavior in PINS mode
+                if self._display_mode == 'pins':
+                    # Exit PINS mode and go to this page
                     self._display_mode = 'page'
                     self._change_page(page_idx)
-                    self.show_message("View: PAGE {} (exited locks)".format(page_idx + 1))
-                    self.log_message("Exited LOCKS mode via page button press (CC {})".format(cc_num))
+                    self.show_message("View: PAGE {} (exited pins)".format(page_idx + 1))
+                    self.log_message("Exited PINS mode via page button press (CC {})".format(cc_num))
                 else:
                     # Normal page change
                     self._change_page(page_idx)
@@ -269,7 +269,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
         Normal mode:
           CC 44 (single): Stop recording + Re-enable automations (cleanup)
           CC 44 (double): Start recording (arrangement overdub + automation ARM + record)
-          CC 45: LOCK mode (hold + rouge = lock/unlock) OR double-tap for display mode toggle
+          CC 45: PIN mode (hold + rouge = pin/unpin) OR double-tap for display mode toggle
           CC 46: SNAPSHOT toggle (save/restore all controls)
           CC 47: SHIFT modifier (hold for alternate functions)
 
@@ -300,10 +300,10 @@ class FaderfoxMX12byYVMA(ControlSurface):
                     # Update last press time for next double-tap detection
                     self._last_cc44_press_time = now
 
-        elif cc_num == 45:  # LOCK mode + DOUBLE-TAP for display mode toggle
+        elif cc_num == 45:  # PIN mode + DOUBLE-TAP for display mode toggle
             if value > 0:
                 if self._shift_mode:
-                    # SHIFT + LOCK: Available for future feature
+                    # SHIFT + PIN: Available for future feature
                     self.show_message("SHIFT+CC45: Not assigned")
                     self.log_message("SHIFT+CC45 pressed - Available for new feature")
                 else:
@@ -315,20 +315,20 @@ class FaderfoxMX12byYVMA(ControlSurface):
                         # DOUBLE-TAP detected → Toggle display mode
                         self.log_message("Double-tap detected on CC45 ({:.3f}s since last press)".format(time_since_last_press))
                         self._toggle_display_mode()
-                        # Don't activate lock mode on double-tap
+                        # Don't activate pin mode on double-tap
                     else:
-                        # SINGLE PRESS → Activate lock mode (normal behavior)
-                        self._lock_mode = True
-                        self.show_message("LOCK mode: Press slot to lock/unlock")
-                        self.log_message("LOCK mode: ON")
+                        # SINGLE PRESS → Activate pin mode (normal behavior)
+                        self._pin_mode = True
+                        self.show_message("PIN mode: Press slot to pin/unpin")
+                        self.log_message("PIN mode: ON")
 
                     # Update last press time for next double-tap detection
                     self._last_cc45_press_time = now
             else:
-                # Release: disable LOCK mode
-                self._lock_mode = False
+                # Release: disable PIN mode
+                self._pin_mode = False
                 # Don't show message on release (too verbose)
-                self.log_message("LOCK mode: OFF")
+                self.log_message("PIN mode: OFF")
 
         elif cc_num == 46:  # SNAPSHOT toggle (or SHIFT+SNAPSHOT = RE-ENABLE AUTOMATION)
             if value > 0:  # Only trigger on press
@@ -357,12 +357,12 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         Mode-aware selection:
         - PAGE mode: Select from current page tracks
-        - LOCKS mode: Select from virtual page tracks
+        - PINS mode: Select from virtual page tracks
         """
         track = None
 
-        if self._display_mode == 'locks':
-            # LOCKS MODE: Get track from virtual page
+        if self._display_mode == 'pins':
+            # PINS MODE: Get track from virtual page
             virtual_tracks = self._build_virtual_track_list()
             start_idx = self._page_scroll_offset
             visible_tracks = virtual_tracks[start_idx:start_idx + self.NUM_TRACKS]
@@ -386,20 +386,20 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self.show_message("Slot {} empty".format(slot_idx + 1))
             self.log_message("Cannot select: slot {} is empty".format(slot_idx))
 
-    def _toggle_lock(self, slot_idx):
-        """Toggle track in/out of virtual page (add to LOCKS view)
+    def _toggle_pin(self, slot_idx):
+        """Toggle track in/out of virtual page (add to PINS view)
 
         Mode-aware behavior:
         - PAGE mode: Add current page track to virtual page list
-        - LOCKS mode: Remove track from virtual page list
+        - PINS mode: Remove track from virtual page list
 
         Uses list to preserve order and avoid slot conflicts
         """
         # Get current track in this slot
         track = None
 
-        if self._display_mode == 'locks':
-            # In LOCKS mode, get track from virtual list
+        if self._display_mode == 'pins':
+            # In PINS mode, get track from virtual list
             virtual_tracks = self._build_virtual_track_list()
             start_idx = self._page_scroll_offset
             visible_tracks = virtual_tracks[start_idx:start_idx + self.NUM_TRACKS]
@@ -419,16 +419,16 @@ class FaderfoxMX12byYVMA(ControlSurface):
             return
 
         # Toggle track in/out of virtual page list
-        if track in self._locked_tracks:
+        if track in self._pinned_tracks:
             # Remove from virtual page
-            self._locked_tracks.remove(track)
-            self.show_message("Removed: {} from virtual page".format(track.name))
-            self.log_message("Removed from virtual page: {}".format(track.name))
+            self._pinned_tracks.remove(track)
+            self.show_message("Unpinned: {}".format(track.name))
+            self.log_message("Unpinned: {}".format(track.name))
         else:
             # Add to virtual page
-            self._locked_tracks.append(track)
-            self.show_message("Added: {} to virtual page".format(track.name))
-            self.log_message("Added to virtual page: {} (total: {})".format(track.name, len(self._locked_tracks)))
+            self._pinned_tracks.append(track)
+            self.show_message("Pinned: {}".format(track.name))
+            self.log_message("Pinned: {} (total: {})".format(track.name, len(self._pinned_tracks)))
 
         self._update_activity_listeners()
 
@@ -532,29 +532,29 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._page_led_states[self._recording_led_slot] = 0
 
     def _toggle_display_mode(self):
-        """Toggle between PAGE and LOCKS display mode (double-tap CC 45)
+        """Toggle between PAGE and PINS display mode (double-tap CC 45)
 
         PAGE mode:
         - Shows tracks from current page (normal behavior)
-        - Locked tracks visible if on their original page
-        - Green LEDs: page indicator + blink on locked slots
+        - Pinned tracks visible if on their original page
+        - Green LEDs: page indicator + blink on pinned slots
 
-        LOCKS mode:
-        - Shows ONLY locked tracks
+        PINS mode:
+        - Shows ONLY pinned tracks
         - All page buttons (CC 36-43) OFF
-        - Green LED CC 45 (slot 9) FIXED ON to indicate LOCKS mode
-        - Encoder scrolls through locked tracks if > 12
+        - Green LED CC 45 (slot 9) FIXED ON to indicate PINS mode
+        - Encoder scrolls through pinned tracks if > 12
         """
         # CRITICAL: Invalidate LED cache to force resend
         # Use values opposite to what we want to ensure MIDI is sent
         self._page_led_states = [127] * 12  # Invalidate with opposite values
 
         if self._display_mode == 'page':
-            # Switch to LOCKS mode
-            self._display_mode = 'locks'
-            num_locks = len(self._locked_tracks)
-            self.show_message("View: LOCKS ({} locked tracks)".format(num_locks))
-            self.log_message("Display mode: LOCKS ({} tracks)".format(num_locks))
+            # Switch to PINS mode
+            self._display_mode = 'pins'
+            num_pins = len(self._pinned_tracks)
+            self.show_message("View: PINS ({} pinned tracks)".format(num_pins))
+            self.log_message("Display mode: PINS ({} tracks)".format(num_pins))
         else:
             # Switch to PAGE mode
             self._display_mode = 'page'
@@ -572,7 +572,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         # CRITICAL: Update green LEDs immediately after mode switch
         # Without this, LEDs won't update until next blink state change
-        self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
+        self._update_green_leds_with_pins(self._blink_fast_state, self._blink_slow_state)
 
     def _backup_current_state(self):
         """Backup current control positions (toggle snapshot mode)"""
@@ -736,12 +736,12 @@ class FaderfoxMX12byYVMA(ControlSurface):
         - Decrementing values (7→6→5) = scroll backward
         - Handles wrap-around (127→0 or 0→127)
 
-        LOCKS mode:
-        - Scrolls through locked tracks if > 12 locks
-        - Shows "LOCKS: Scroll +X/Y"
+        PINS mode:
+        - Scrolls through pinned tracks if > 12 pins
+        - Shows "PINS: Scroll +X/Y"
 
         PAGE mode:
-        - Scrolls within current page (respects locks)
+        - Scrolls within current page (respects pins)
         - Shows "PAGE: Scroll +X/Y"
         """
         # Detect scroll direction using absolute encoder values (0-127)
@@ -780,8 +780,8 @@ class FaderfoxMX12byYVMA(ControlSurface):
         if scroll_direction == 0:
             return
 
-        if self._display_mode == 'locks':
-            # LOCKS MODE: Scroll through locked tracks
+        if self._display_mode == 'pins':
+            # PINS MODE: Scroll through pinned tracks
             virtual_tracks = self._build_virtual_track_list()
             total_tracks = len(virtual_tracks)
 
@@ -799,13 +799,13 @@ class FaderfoxMX12byYVMA(ControlSurface):
                 self._page_scroll_offset = max(self._page_scroll_offset - 1, 0)
 
             # Show position
-            self.show_message("LOCKS: Scroll +{}/{}".format(self._page_scroll_offset, max_scroll))
-            self.log_message("LOCKS scroll: offset={}, max={}, total={}".format(
+            self.show_message("PINS: Scroll +{}/{}".format(self._page_scroll_offset, max_scroll))
+            self.log_message("PINS scroll: offset={}, max={}, total={}".format(
                 self._page_scroll_offset, max_scroll, total_tracks
             ))
 
         else:  # 'page' mode
-            # PAGE MODE: Scroll within page (no lock consideration)
+            # PAGE MODE: Scroll within page (no pin consideration)
             if not self._all_tracks_padded:
                 return
 
@@ -842,7 +842,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
         self._scroll_indicator_end_time = time.time() + 2.0
 
         # Remap with new scroll offset
-        self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
+        self._update_green_leds_with_pins(self._blink_fast_state, self._blink_slow_state)
         self._map_current_page()
 
     def _change_page(self, page_idx):
@@ -870,7 +870,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         self.show_message("Page {}/{}".format(page_idx + 1, num_pages))
         # Update green LEDs immediately (update_display will continue updating for blinks)
-        self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
+        self._update_green_leds_with_pins(self._blink_fast_state, self._blink_slow_state)
         self._map_current_page()
 
     def _handle_fader(self, track_idx, value):
@@ -1079,18 +1079,18 @@ class FaderfoxMX12byYVMA(ControlSurface):
         Returns:
             List of tracks to display in the 12 slots
 
-        Mode 'locks':
-            Returns locked tracks in order of addition (list preserves order)
+        Mode 'pins':
+            Returns pinned tracks in order of addition (list preserves order)
             Example: [Bass (added 1st), Drums (added 2nd), Lead (added 3rd), ...]
 
         Mode 'page':
             Returns tracks from current page (normal behavior)
             Example: [Track1|2, Track2|2, Track3|2, ...]
         """
-        if self._display_mode == 'locks':
-            # LOCKS mode: return locked tracks in order of addition
-            # _locked_tracks is now a list, so just return a copy
-            return list(self._locked_tracks)
+        if self._display_mode == 'pins':
+            # PINS mode: return pinned tracks in order of addition
+            # _pinned_tracks is now a list, so just return a copy
+            return list(self._pinned_tracks)
 
         else:  # 'page'
             # PAGE mode: return tracks from current page (normal behavior)
@@ -1103,14 +1103,14 @@ class FaderfoxMX12byYVMA(ControlSurface):
         """Map tracks from current scroll position to hardware slots
 
         New behavior with display mode:
-        - PAGE mode: Shows ONLY page tracks (no locked tracks shown)
-        - LOCKS mode: Shows ONLY locked tracks (virtual page)
+        - PAGE mode: Shows ONLY page tracks (no pinned tracks shown)
+        - PINS mode: Shows ONLY pinned tracks (virtual page)
 
         Takes into account:
-        - Display mode (_display_mode) for PAGE vs LOCKS view
+        - Display mode (_display_mode) for PAGE vs PINS view
         - Global scroll offset (_scroll_offset) for page position (PAGE mode only)
         - Local scroll offset (_page_scroll_offset) for scrolling within virtual list
-        - Locked tracks shown in slot order (LOCKS mode)
+        - Pinned tracks shown in slot order (PINS mode)
         """
         # Remove old parameter listeners
         self._remove_param_listeners()
@@ -1124,12 +1124,12 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._send_midi((0xB0 | self._midi_channel, 24 + i, 0))
             self._led_states[i] = 0
 
-        if self._display_mode == 'locks':
-            # LOCKS MODE: Show only virtual page tracks (locked tracks)
-            # Build virtual list (locked tracks sorted by slot index)
+        if self._display_mode == 'pins':
+            # PINS MODE: Show only virtual page tracks (pinned tracks)
+            # Build virtual list (pinned tracks sorted by slot index)
             virtual_tracks = self._build_virtual_track_list()
 
-            # Apply scroll offset for navigation if > 12 locks
+            # Apply scroll offset for navigation if > 12 pins
             start_idx = self._page_scroll_offset
             visible_tracks = virtual_tracks[start_idx:start_idx + self.NUM_TRACKS]
 
@@ -1140,12 +1140,12 @@ class FaderfoxMX12byYVMA(ControlSurface):
                     self._map_track(track_idx, track)
 
         else:  # 'page' mode
-            # PAGE MODE: Show ONLY page tracks (ignore locked tracks)
+            # PAGE MODE: Show ONLY page tracks (ignore pinned tracks)
             # Get tracks for current scroll position + local scroll offset
             start_idx = self._scroll_offset + self._page_scroll_offset
             page_tracks = self._all_tracks_padded[start_idx:start_idx + self.NUM_TRACKS]
 
-            # Map page tracks directly (no lock priority)
+            # Map page tracks directly (no pin priority)
             for track_idx in range(min(len(page_tracks), self.NUM_TRACKS)):
                 track = page_tracks[track_idx]
                 if track is not None:
@@ -1317,8 +1317,8 @@ class FaderfoxMX12byYVMA(ControlSurface):
         # Get currently mapped tracks based on display mode
         mapped_tracks = []
 
-        if self._display_mode == 'locks':
-            # LOCKS MODE: Get tracks from virtual page
+        if self._display_mode == 'pins':
+            # PINS MODE: Get tracks from virtual page
             virtual_tracks = self._build_virtual_track_list()
             start_idx = self._page_scroll_offset
             visible_tracks = virtual_tracks[start_idx:start_idx + self.NUM_TRACKS]
@@ -1356,8 +1356,8 @@ class FaderfoxMX12byYVMA(ControlSurface):
         # Get currently mapped tracks based on display mode
         tracks_to_update = []
 
-        if self._display_mode == 'locks':
-            # LOCKS MODE: Get tracks from virtual page
+        if self._display_mode == 'pins':
+            # PINS MODE: Get tracks from virtual page
             virtual_tracks = self._build_virtual_track_list()
             start_idx = self._page_scroll_offset
             visible_tracks = virtual_tracks[start_idx:start_idx + self.NUM_TRACKS]
@@ -1569,7 +1569,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
         """Update green LEDs (CC 36-47): 8 page buttons + 4 function buttons
 
         DEPRECATED: This method is kept for backward compatibility but is now
-        replaced by _update_green_leds_with_locks() which handles page + locks.
+        replaced by _update_green_leds_with_pins() which handles page + pins.
         Only used during initialization.
         """
         updated = []
@@ -1618,10 +1618,10 @@ class FaderfoxMX12byYVMA(ControlSurface):
         # Reset state to force resend of all LEDs
         self._page_led_states = [0] * 12  # All OFF
         # Update with current blink states
-        self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
+        self._update_green_leds_with_pins(self._blink_fast_state, self._blink_slow_state)
 
     def _force_resync_all_leds(self):
-        """Force complete resync of ALL LEDs (red activity + green page/locks)
+        """Force complete resync of ALL LEDs (red activity + green page/pins)
 
         Called on every button press/release to prevent hardware local toggle
         from "breaking" the display.
@@ -1656,8 +1656,8 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._send_midi((0xB0 | self._midi_channel, cc_num, cached_value))
             self._led_states[track_idx] = cached_value
 
-        # Resync page/lock LEDs (green, CC 36-47)
-        self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
+        # Resync page/pin LEDs (green, CC 36-47)
+        self._update_green_leds_with_pins(self._blink_fast_state, self._blink_slow_state)
 
     def _update_scroll_position_indicator(self):
         """Show scroll position indicator on green LEDs for 2 seconds after scrolling
@@ -1707,7 +1707,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._send_midi((0xB0 | self._midi_channel, cc_num, new_value))
             self._page_led_states[i] = new_value
 
-    def _update_green_leds_with_locks(self, fast_blink, slow_blink):
+    def _update_green_leds_with_pins(self, fast_blink, slow_blink):
         """Update all 12 green LEDs with display mode awareness
 
         Args:
@@ -1719,9 +1719,9 @@ class FaderfoxMX12byYVMA(ControlSurface):
         - Green LEDs represent entire track list
         - OFF = visible tracks, ON = hidden tracks
 
-        LOCKS MODE:
+        PINS MODE:
         - CC 36-43 (page buttons): ALL OFF (no page indicator)
-        - CC 45 (slot 9): FIXED ON (LOCKS mode indicator)
+        - CC 45 (slot 9): FIXED ON (PINS mode indicator)
         - CC 46-47 (slots 10-11): Snapshot/Recording LEDs (handled in update_display)
 
         PAGE MODE (differentiated patterns):
@@ -1735,14 +1735,14 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._update_scroll_position_indicator()
             return
 
-        if self._display_mode == 'locks':
-            # LOCKS MODE: All page buttons OFF, CC 45 ON
+        if self._display_mode == 'pins':
+            # PINS MODE: All page buttons OFF, CC 45 ON
             # FORCE UPDATE: Always send MIDI (ignore cache) to ensure clean display
             for i in range(12):
                 cc_num = 36 + i
                 new_value = 0  # Default: OFF
 
-                # CC 45 (slot 9): FIXED ON to indicate LOCKS mode
+                # CC 45 (slot 9): FIXED ON to indicate PINS mode
                 if i == 9:  # Slot 9 = CC 45
                     new_value = 127
 
@@ -1769,7 +1769,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
                 # Check if track in this slot is in virtual page
                 track_in_virtual_page = False
                 if i < len(page_tracks) and page_tracks[i] is not None:
-                    track_in_virtual_page = page_tracks[i] in self._locked_tracks
+                    track_in_virtual_page = page_tracks[i] in self._pinned_tracks
 
                 # Determine LED pattern based on context
                 if track_in_virtual_page:
@@ -1813,7 +1813,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
         """Called ~10Hz by Ableton for display updates and blinking
 
         CPU Optimization: Only update LEDs when blink state actually changes
-        - Before: 10 calls/sec to _update_green_leds_with_locks()
+        - Before: 10 calls/sec to _update_green_leds_with_pins()
         - After: ~7 calls/sec (only on blink transitions: 2.5Hz fast + 1Hz slow)
         - Reduction: 30% less function calls
         """
@@ -1822,10 +1822,10 @@ class FaderfoxMX12byYVMA(ControlSurface):
         if self._scroll_indicator_active and time.time() >= self._scroll_indicator_end_time:
             self._scroll_indicator_active = False
             # Force LED update to restore normal display
-            self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
+            self._update_green_leds_with_pins(self._blink_fast_state, self._blink_slow_state)
 
         # Fast blink: 2.5Hz = 400ms cycle (3 cycles ON, 1 cycle OFF = 75/25)
-        # Pour locked seul (pas page courante) - rapide pour attirer l'attention
+        # Pour pinned seul (pas page courante) - rapide pour attirer l'attention
         # Note: update_display() appelé à ~10Hz (100ms), donc 4 compteurs = 400ms cycle
         self._blink_fast_counter += 1
         if self._blink_fast_counter <= 3:
@@ -1837,7 +1837,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._blink_fast_counter = 0
 
         # Slow blink: 1Hz = 1000ms cycle (9 cycles ON, 1 cycle OFF = 90/10)
-        # Pour page courante + locked (double fonction) - moins dérangeant
+        # Pour page courante + pinned (double fonction) - moins dérangeant
         # Note: update_display() appelé à ~10Hz (100ms), donc 10 compteurs = 1000ms cycle
         self._blink_slow_counter += 1
         if self._blink_slow_counter <= 9:
@@ -1894,7 +1894,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
                          self._blink_slow_state != self._prev_blink_slow_state)
 
         if blink_changed:
-            self._update_green_leds_with_locks(self._blink_fast_state, self._blink_slow_state)
+            self._update_green_leds_with_pins(self._blink_fast_state, self._blink_slow_state)
             self._prev_blink_fast_state = self._blink_fast_state
             self._prev_blink_slow_state = self._blink_slow_state
 

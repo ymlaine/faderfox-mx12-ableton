@@ -22,10 +22,10 @@ A professional Ableton Live Remote Script for the Faderfox MX12 MIDI controller,
 - **Smart Page System**: Organize tracks with `|1` to `|8` suffixes
 - **Flexible Filling**: Generic `|` tracks fill empty slots automatically
 - **8 Pages × 12 Tracks**: Up to 96 tracks accessible
-- **Virtual Page (LOCKS)**: Create custom track collections across pages
+- **Virtual Page (PINS)**: Create custom track collections across pages
 
 ### Workflow Features
-- **Track Locking**: Keep important tracks visible across page changes
+- **Track Pinning**: Keep important tracks visible across page changes
 - **Scroll Indicator**: Visual depth gauge showing scroll position (2-second display)
 - **Preview Mode**: Try parameter changes, instantly revert
 - **Recording Control**: Quick recording start/stop with LED indicator
@@ -75,7 +75,7 @@ A professional Ableton Live Remote Script for the Faderfox MX12 MIDI controller,
 │  │                                                                │   │
 │  │  FUNCTIONS (CC 44-47):                                        │   │
 │  │  [🟢][🟢][🟢][🟢]                                             │   │
-│  │  SEL LOCK PRV SHFT                                            │   │
+│  │  REC  PIN  SNP SHFT                                           │   │
 │  │   44  45  46  47                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
@@ -97,10 +97,10 @@ A professional Ableton Live Remote Script for the Faderfox MX12 MIDI controller,
 | CC | Color | Button | Function | LED Behavior |
 |----|-------|--------|----------|--------------|
 | **24-35** | Red | Track buttons | Select track | ON = Activity detected |
-| **36-43** | Green | Page 1-8 | Switch page | ON = Current page, BLINK = Locked |
-| **44** | Green | SELECT | Hold + Red = Select track | - |
-| **45** | Green | LOCK | Hold + Red = Lock/unlock track<br>Double-tap = Toggle LOCKS mode | ON in LOCKS mode |
-| **46** | Green | PREVIEW | Hold to preview changes | BLINK when active |
+| **36-43** | Green | Page 1-8 | Switch page | ON = Current page, BLINK = Pinned |
+| **44** | Green | RECORD | Single-tap = Stop recording<br>Double-tap = Start recording | BLINK when recording |
+| **45** | Green | PIN | Hold + Red = Pin/unpin track<br>Double-tap = Toggle PINS mode | ON in PINS mode |
+| **46** | Green | SNAPSHOT | Toggle snapshot mode | BLINK when active |
 | **47** | Green | SHIFT | Modifier for alternate functions | - |
 
 ### Function Combinations
@@ -208,16 +208,16 @@ The script automatically maps the **first 3 macros**:
 
 ## 🔥 Advanced Features
 
-### Virtual Page (LOCKS Mode)
+### Virtual Page (PINS Mode)
 
 Create a custom collection of tracks from any page:
 
-1. **Hold LOCK (CC 45)** + Press **Red Button** → Add/remove track from virtual page
-2. **Double-tap LOCK (CC 45)** → Toggle between PAGE and LOCKS view
-3. In LOCKS mode:
-   - View only locked tracks
+1. **Hold PIN (CC 45)** + Press **Red Button** → Add/remove track from virtual page
+2. **Double-tap PIN (CC 45)** → Toggle between PAGE and PINS view
+3. In PINS mode:
+   - View only pinned tracks
    - CC 45 LED is ON (mode indicator)
-   - Scroll with encoder if > 12 locked tracks
+   - Scroll with encoder if > 12 pinned tracks
 
 **Use case**: Keep bass, drums, and vocals accessible regardless of current page.
 
@@ -247,8 +247,8 @@ Test parameter changes without committing:
 
 ### Recording Control
 
-- **Single-tap SHIFT + CC 45**: Stop recording + re-enable automations (cleanup)
-- **Double-tap SHIFT + CC 45**: Start recording (overdub + automation ARM)
+- **Single-tap CC 44**: Stop recording + re-enable automations (cleanup)
+- **Double-tap CC 44**: Start recording (overdub + automation ARM)
 - **Recording LED (slot 11)**: Blinks at 4Hz during recording
 
 ### Activity LEDs
@@ -372,8 +372,8 @@ Page 1: 20 tracks |1 (scrollable within page)
 | State | Meaning |
 |-------|---------|
 | **SOLID ON** | Current page |
-| **SLOW BLINK (1Hz)** | Track in virtual page + current page button |
-| **FAST BLINK (2.5Hz)** | Track in virtual page (not on current page) |
+| **SLOW BLINK (1Hz)** | Pinned track + current page button |
+| **FAST BLINK (2.5Hz)** | Pinned track (not on current page) |
 | **OFF** | Inactive |
 
 ### Red LEDs (Activity)
