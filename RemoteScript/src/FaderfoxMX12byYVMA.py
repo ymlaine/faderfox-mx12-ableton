@@ -16,7 +16,7 @@ import Live
 from _Framework.ControlSurface import ControlSurface
 from . import config
 
-VERSION = "3.0.0"  # Major: Smart page filling - |0=|  + |1-|8 priority + | tracks as filler
+VERSION = "3.0.0"  # Major: Smart page filling - |1-|8 priority + | tracks as filler
 
 
 class FaderfoxMX12byYVMA(ControlSurface):
@@ -927,7 +927,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         Returns:
             None: Track not in MX12 system
-            0: Track with '|' or '|0' (default/fill group)
+            0: Track with '|' (default/fill group)
             1-8: Track with '|1' to '|8'
         """
         if track_name.endswith('|'):
@@ -936,9 +936,6 @@ class FaderfoxMX12byYVMA(ControlSurface):
         match = re.search(r'\|(\d+)$', track_name)
         if match:
             group_num = int(match.group(1))
-            # |0 is treated as | (group 0)
-            if group_num == 0:
-                return 0
             return group_num if 1 <= group_num <= 8 else None
 
         return None
@@ -946,12 +943,11 @@ class FaderfoxMX12byYVMA(ControlSurface):
     def _scan_tracks(self):
         """Scan tracks and organize into groups with smart page filling
 
-        New logic:
-        1. |0 = | (equivalent)
-        2. Pages 0-7 filled with |1-|8 tracks first (priority)
-        3. If page has < 12 tracks, fill with | tracks (in order)
-        4. If page has >= 12 tracks, no filling (scroll within page)
-        5. If no |x tracks, fill pages with | tracks only
+        Logic:
+        1. Pages 0-7 filled with |1-|8 tracks first (priority)
+        2. If page has < 12 tracks, fill with | tracks (in order)
+        3. If page has >= 12 tracks, no filling (scroll within page)
+        4. If no |x tracks, fill pages with | tracks only
         """
         # Reset structures
         self._track_groups = {}
@@ -973,7 +969,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
                 self._track_groups[group_id].append(track)
                 self._filtered_tracks.append(track)  # Legacy
 
-        # Get group 0 tracks (| and |0) for filling
+        # Get group 0 tracks (|) for filling
         fill_tracks = self._track_groups.get(0, [])
         fill_index = 0  # Track position in fill_tracks list
 

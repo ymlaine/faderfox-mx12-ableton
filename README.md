@@ -181,7 +181,7 @@ Utility|        → Filler track
 
 **Smart Filling Rules**:
 - `|1` to `|8` = Dedicated pages (priority)
-- `|` or `|0` = Filler tracks (auto-distributed)
+- `|` = Filler tracks (auto-distributed)
 - Pages with < 12 tracks are filled with `|` tracks
 - Pages with ≥ 12 tracks are scrollable (no filling)
 
@@ -275,7 +275,6 @@ Ensure your MX12 is configured to send:
 | `TrackName|1` | Page 1 priority | `Bass|1` |
 | `TrackName|2` to `|8` | Pages 2-8 priority | `Drums|2` |
 | `TrackName|` | Filler track | `FX|` |
-| `TrackName|0` | Same as `|` | `Utility|0` |
 
 ### Pickup Mode
 
@@ -390,7 +389,7 @@ Page 1: 20 tracks |1 (scrollable within page)
 
 ### v3.0.0 (Current)
 - **Major**: Smart page filling system
-- `|0` treated as `|` (equivalent)
+- **Breaking**: Removed `|0` support (use `|` instead)
 - Pages filled with |1-|8 tracks first, then | tracks
 - Fallback: If no |x tracks, fill pages with | only
 

@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Smart page filling system**: |1-|8 tracks fill pages first, then | tracks fill remaining slots
-- **|0 = | equivalence**: Tracks with |0 suffix treated as | (filler group)
 - **Fallback mode**: If no |x tracks, fill all 8 pages with | tracks only
 - **Scroll depth indicator**: LEDs fill right-to-left showing scroll position from start
 - **Visual feedback**: 2-second LED display (1 LED = 1 track scrolled, max 12)
@@ -22,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Track pinning/unpinning (was lock/unlock)
   - `_pinned_tracks` variable (was `_locked_tracks`)
   - More intuitive terminology: "pin a track" vs "lock a track"
+- **BREAKING**: Removed `|0` suffix support (use `|` instead)
+  - Simplified track naming: only `|` and `|1` to `|8` are valid
+  - `|0` no longer recognized as equivalent to `|`
 - Pages now filled intelligently based on track suffixes
 - | tracks distributed across pages in order of appearance
 - Page positioning system using `_page_start_positions` for accurate overflow handling
@@ -96,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial Faderfox MX12 support
 - Basic rack device mapping (Macro 1-3)
-- Multi-page organization (|0-|8)
+- Multi-page organization (|1-|8)
 - Track pinning system (virtual page)
 - Preview mode
 - Activity LED monitoring (polling-based)
@@ -113,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Track collections are "pinned" (was "locked")
    - Pinned tracks are preserved during upgrade
 2. **Track suffixes**: Use |1-|8 for dedicated pages, | for fillers
+   - **IMPORTANT**: `|0` is no longer supported, rename to `|`
 3. Pages will reorganize on next script load based on new smart filling system
 
 ### 2.0.0 Migration
