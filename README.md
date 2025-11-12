@@ -74,8 +74,8 @@ A professional Ableton Live Remote Script for the Faderfox MX12 MIDI controller,
 │  │   P1  P2  P3  P4  P5  P6  P7  P8                             │   │
 │  │                                                                │   │
 │  │  FUNCTIONS (CC 44-47):                                        │   │
-│  │  [🟢][🟢][🟢][🟢]                                             │   │
-│  │  REC  PIN  SNP SHFT                                           │   │
+│  │  [⚫][🟢][🟢][🟢]                                             │   │
+│  │   —  PIN SNAP REC                                            │   │
 │  │   44  45  46  47                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
@@ -96,19 +96,12 @@ A professional Ableton Live Remote Script for the Faderfox MX12 MIDI controller,
 ### Buttons & LEDs
 | CC | Color | Button | Function | LED Behavior |
 |----|-------|--------|----------|--------------|
-| **24-35** | Red | Track buttons | Select track | ON = Activity detected |
-| **36-43** | Green | Page 1-8 | Switch page | ON = Current page, BLINK = Pinned |
-| **44** | Green | RECORD | Single-tap = Stop recording<br>Double-tap = Start recording | BLINK when recording |
-| **45** | Green | PIN | Hold + Red = Pin/unpin track<br>Double-tap = Toggle PINS mode | ON in PINS mode |
-| **46** | Green | SNAPSHOT | Toggle snapshot mode | BLINK when active |
-| **47** | Green | SHIFT | Modifier for alternate functions | - |
-
-### Function Combinations
-| Combination | Action |
-|-------------|--------|
-| **SHIFT + CC 44** | *(Reserved for future)* |
-| **SHIFT + CC 45 (double-tap)** | Start/stop recording (overdub + automation ARM) |
-| **SHIFT + CC 46** | Re-enable all overridden automations |
+| **24-35** | Red | Track buttons | Select track | ON = Activity |
+| **36-43** | Green | Page 1-8 | Switch page | ON = Current page<br>BLINK = Pinned track |
+| **44** | Green | — | *(Available)* | — |
+| **45** | Green | PIN | Hold + Red = Pin/unpin track<br>2× = Toggle PINS view | ON = PINS mode |
+| **46** | Green | SNAPSHOT | Toggle save/restore parameters | BLINK = Active |
+| **47** | Green | RECORD | 1× = Stop + Re-enable automations<br>2× = Start recording | BLINK = Recording |
 
 ---
 
@@ -207,46 +200,43 @@ The script automatically maps the **first 3 macros**:
 
 ### Virtual Page (PINS Mode)
 
-Create a custom collection of tracks from any page:
+Create a custom collection of favorite tracks:
 
-1. **Hold PIN (CC 45)** + Press **Red Button** → Add/remove track from virtual page
-2. **Double-tap PIN (CC 45)** → Toggle between PAGE and PINS view
-3. In PINS mode:
-   - View only pinned tracks
-   - CC 45 LED is ON (mode indicator)
-   - Scroll with encoder if > 12 pinned tracks
+**CC 45 (PIN):**
+- **Hold PIN + Red button**: Add/remove track from your favorites
+- **Double-tap PIN**: Toggle between PAGE view and PINS view
+- **PINS view**: Shows only your pinned tracks (LED ON)
 
 **Use case**: Keep bass, drums, and vocals accessible regardless of current page.
 
 ### Scroll Position Indicator
 
-When scrolling with the encoder, LEDs show scroll depth for 2 seconds:
+When scrolling with the encoder, green LEDs show scroll depth for 2 seconds:
 
 ```
-Offset 0: [⚫⚫⚫⚫⚫⚫][⚫⚫⚫⚫⚫⚫]  At start position
-Offset 1: [⚫⚫⚫⚫⚫⚫][⚫⚫⚫⚫⚫🟢]  1 track deep
-Offset 3: [⚫⚫⚫⚫⚫⚫][⚫⚫⚫🟢🟢🟢]  3 tracks deep
-Offset 6: [⚫⚫⚫⚫⚫⚫][🟢🟢🟢🟢🟢🟢]  6 tracks deep
+Offset 0: [⚫⚫⚫⚫⚫⚫]  At start
+Offset 1: [⚫⚫⚫⚫⚫🟢]  1 track scrolled
+Offset 3: [⚫⚫⚫🟢🟢🟢]  3 tracks scrolled
+Offset 6: [🟢🟢🟢🟢🟢🟢]  6 tracks scrolled
 
-LEDs fill from RIGHT to LEFT showing scroll depth from start
-1 LED = 1 track scrolled (max 12)
+LEDs fill RIGHT to LEFT (1 LED = 1 track, max 12 LEDs)
 ```
-
-### Preview Mode
-
-Test parameter changes without committing:
-
-1. **Press CC 46 (PREVIEW)** → Backup current state
-2. **Hold CC 46** → Modify parameters freely
-3. **Release CC 46** → Restore original values
-
-**Use case**: Quickly audition different macro settings.
 
 ### Recording Control
 
-- **Single-tap CC 44**: Stop recording + re-enable automations (cleanup)
-- **Double-tap CC 44**: Start recording (overdub + automation ARM)
-- **Recording LED (slot 11)**: Blinks at 4Hz during recording
+**CC 47 (RECORD):**
+- **1 tap**: Stop recording + re-enable automations
+- **2 taps**: Start recording (overdub + automation ARM)
+- **LED**: Blinks at 4Hz while recording
+
+### Snapshot Mode
+
+**CC 46 (SNAPSHOT):**
+- **1st press**: Save current parameter values
+- **Modify**: Change faders/pots freely
+- **2nd press**: Restore saved values (or keep changes)
+
+**Use case**: Test different settings without losing your original mix.
 
 ### Activity LEDs
 
@@ -264,14 +254,6 @@ Ensure your MX12 is configured to send:
 - **MIDI Channel**: 1 (default)
 - **CC Messages**: 0-60 as specified in mapping
 - **Encoder Mode**: Absolute (0-127) or Relative
-
-### Track Naming Conventions
-
-| Pattern | Behavior | Example |
-|---------|----------|---------|
-| `TrackName|1` | Page 1 priority | `Bass|1` |
-| `TrackName|2` to `|8` | Pages 2-8 priority | `Drums|2` |
-| `TrackName|` | Filler track | `FX|` |
 
 ### Pickup Mode
 

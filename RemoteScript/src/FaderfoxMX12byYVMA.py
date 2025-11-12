@@ -52,8 +52,8 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         # Display mode (Phase X - Simplified pins view)
         self._display_mode = 'page'  # 'page' or 'pins'
-        self._last_cc45_press_time = 0  # For double-tap detection on CC 45
-        self._last_cc44_press_time = 0  # For double-tap detection on CC 44 (recording)
+        self._last_cc45_press_time = 0  # For double-tap detection on CC 45 (PIN)
+        self._last_cc47_press_time = 0  # For double-tap detection on CC 47 (RECORD)
 
         # Encoder state (for absolute mode 0-127)
         self._last_encoder_value = None  # Track last encoder value to detect direction
@@ -66,8 +66,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
         # Note: _select_mode removed - track selection is now the default behavior for red buttons
         self._pin_mode = False    # CC 45 - PIN combo mode (hold)
         self._snapshot_mode = False  # CC 46 - SNAPSHOT toggle mode (active/inactive)
-        self._shift_mode = False   # CC 47 - SHIFT modifier (hold for alternate functions)
-        self._recording_mode = False  # CC 44 - Recording toggle mode (arrangement + automation)
+        self._recording_mode = False  # CC 47 - Recording toggle mode (arrangement + automation)
 
         # Snapshots (Phase 6) - Toggle mode
         self._snapshot_backup = {}  # Snapshot backup, active while _snapshot_mode = True
@@ -262,95 +261,66 @@ class FaderfoxMX12byYVMA(ControlSurface):
     # === CONTROL HANDLERS ===
 
     def _handle_function_button(self, cc_num, value):
-        """Handle function buttons (CC 44-47) with SHIFT modifier system
+        """Handle function buttons (CC 45-47)
 
-        NOTE: Red buttons now SELECT tracks by default (no function button needed)
+        CC 44: Available (not assigned)
 
-        Normal mode:
-          CC 44 (single): Stop recording + Re-enable automations (cleanup)
-          CC 44 (double): Start recording (arrangement overdub + automation ARM + record)
-          CC 45: PIN mode (hold + rouge = pin/unpin) OR double-tap for display mode toggle
-          CC 46: SNAPSHOT toggle (save/restore all controls)
-          CC 47: SHIFT modifier (hold for alternate functions)
+        CC 45 PIN:
+          - Hold + Red button: Pin/unpin track
+          - Double tap: Toggle PAGE/PINS display mode
 
-        SHIFT mode (hold CC 47):
-          CC 47 + CC 44: [AVAILABLE - Not assigned]
-          CC 47 + CC 45: [AVAILABLE - Not assigned]
-          CC 47 + CC 46: RE-ENABLE AUTOMATIONS
+        CC 46 SNAPSHOT:
+          - Toggle: Save/restore all control positions
+
+        CC 47 RECORD:
+          - Single tap: Stop recording + Re-enable automations
+          - Double tap: Start recording (overdub + automation ARM)
         """
-        if cc_num == 44:  # RECORDING with double-tap detection
-            if value > 0:  # Only trigger on press
-                if self._shift_mode:
-                    # SHIFT + CC44: Available for future feature
-                    self.show_message("SHIFT+CC44: Not assigned")
-                    self.log_message("SHIFT+CC44 pressed - Available for new feature")
-                else:
-                    # Check for double-tap (< 300ms between presses)
-                    now = time.time()
-                    time_since_last_press = now - self._last_cc44_press_time
-
-                    if time_since_last_press < 0.3:
-                        # DOUBLE-TAP detected → Start recording
-                        self.log_message("Double-tap detected on CC44 ({:.3f}s since last press)".format(time_since_last_press))
-                        self._start_recording()
-                    else:
-                        # SINGLE PRESS → Stop recording + re-enable automations
-                        self._stop_recording_and_reenable_automations()
-
-                    # Update last press time for next double-tap detection
-                    self._last_cc44_press_time = now
-
-        elif cc_num == 45:  # PIN mode + DOUBLE-TAP for display mode toggle
+        if cc_num == 45:  # PIN mode + DOUBLE-TAP for display mode toggle
             if value > 0:
-                if self._shift_mode:
-                    # SHIFT + PIN: Available for future feature
-                    self.show_message("SHIFT+CC45: Not assigned")
-                    self.log_message("SHIFT+CC45 pressed - Available for new feature")
+                # Check for double-tap (< 300ms between presses)
+                now = time.time()
+                time_since_last_press = now - self._last_cc45_press_time
+
+                if time_since_last_press < 0.3:
+                    # DOUBLE-TAP detected → Toggle display mode
+                    self.log_message("Double-tap detected on CC45 ({:.3f}s since last press)".format(time_since_last_press))
+                    self._toggle_display_mode()
+                    # Don't activate pin mode on double-tap
                 else:
-                    # Check for double-tap (< 300ms between presses)
-                    now = time.time()
-                    time_since_last_press = now - self._last_cc45_press_time
+                    # SINGLE PRESS → Activate pin mode (normal behavior)
+                    self._pin_mode = True
+                    self.show_message("PIN mode: Press slot to pin/unpin")
+                    self.log_message("PIN mode: ON")
 
-                    if time_since_last_press < 0.3:
-                        # DOUBLE-TAP detected → Toggle display mode
-                        self.log_message("Double-tap detected on CC45 ({:.3f}s since last press)".format(time_since_last_press))
-                        self._toggle_display_mode()
-                        # Don't activate pin mode on double-tap
-                    else:
-                        # SINGLE PRESS → Activate pin mode (normal behavior)
-                        self._pin_mode = True
-                        self.show_message("PIN mode: Press slot to pin/unpin")
-                        self.log_message("PIN mode: ON")
-
-                    # Update last press time for next double-tap detection
-                    self._last_cc45_press_time = now
+                # Update last press time for next double-tap detection
+                self._last_cc45_press_time = now
             else:
                 # Release: disable PIN mode
                 self._pin_mode = False
                 # Don't show message on release (too verbose)
                 self.log_message("PIN mode: OFF")
 
-        elif cc_num == 46:  # SNAPSHOT toggle (or SHIFT+SNAPSHOT = RE-ENABLE AUTOMATION)
+        elif cc_num == 46:  # SNAPSHOT toggle
             if value > 0:  # Only trigger on press
-                if self._shift_mode:
-                    # SHIFT + SNAPSHOT: Re-enable automations
-                    self.show_message("Re-enabling automations...")
-                    self.log_message("SHIFT+SNAPSHOT: Re-enabling automations")
-                    self._reenable_all_automations()
-                    self._resync_all_params_to_hardware()
-                else:
-                    # Normal SNAPSHOT toggle
-                    self._toggle_snapshot()
+                self._toggle_snapshot()
 
-        elif cc_num == 47:  # SHIFT modifier
-            if value > 0:
-                self._shift_mode = True
-                self.show_message("SHIFT mode: ON")
-                self.log_message("SHIFT mode: ON - Hold for alternate functions")
-            else:
-                self._shift_mode = False
-                self.show_message("SHIFT mode: OFF")
-                self.log_message("SHIFT mode: OFF")
+        elif cc_num == 47:  # RECORDING with double-tap detection
+            if value > 0:  # Only trigger on press
+                # Check for double-tap (< 300ms between presses)
+                now = time.time()
+                time_since_last_press = now - self._last_cc47_press_time
+
+                if time_since_last_press < 0.3:
+                    # DOUBLE-TAP detected → Start recording
+                    self.log_message("Double-tap detected on CC47 ({:.3f}s since last press)".format(time_since_last_press))
+                    self._start_recording()
+                else:
+                    # SINGLE PRESS → Stop recording + re-enable automations
+                    self._stop_recording_and_reenable_automations()
+
+                # Update last press time for next double-tap detection
+                self._last_cc47_press_time = now
 
     def _select_track(self, slot_idx):
         """Select track in Ableton (red button press)
@@ -433,7 +403,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
         self._update_activity_listeners()
 
     def _start_recording(self):
-        """Start recording (double-tap CC 44)
+        """Start recording (double-tap CC 47)
 
         Enables arrangement overdub + automation ARM + starts recording
         LED indicator: Red LED on slot 11 (CC 35) blinks rapidly during recording
@@ -471,7 +441,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
             self._recording_mode = False
 
     def _stop_recording_and_reenable_automations(self):
-        """Stop recording and re-enable automations (single press CC 44)
+        """Stop recording and re-enable automations (single press CC 47)
 
         This is the "cleanup" action:
         - Stops recording if active
@@ -501,7 +471,7 @@ class FaderfoxMX12byYVMA(ControlSurface):
 
         # Always re-enable automations and resync (even if not recording)
         self.show_message("Re-enabling automations...")
-        self.log_message("CC44 cleanup: Re-enabling automations + resyncing hardware")
+        self.log_message("CC47 cleanup: Re-enabling automations + resyncing hardware")
         self._reenable_all_automations()
         self._resync_all_params_to_hardware()
 
