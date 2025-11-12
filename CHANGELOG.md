@@ -5,7 +5,7 @@ All notable changes to the Faderfox MX12 Control Surface will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - 2025-01-12
+## [3.0.0] - 2025-11-12
 
 ### Added
 - **Smart page filling system**: |1-|8 tracks fill pages first, then | tracks fill remaining slots
@@ -30,28 +30,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.9.x] - Development Versions
 
-### [2.9.9] - 2025-01-11
+### [2.9.9] - 2025-11-11
 - Improved scroll indicator with 1 LED = 1 hidden track
 - Directional display (left/right)
 
-### [2.9.8] - 2025-01-11
+### [2.9.8] - 2025-11-11
 - Fixed LED updates in scroll indicator and LOCKS mode
 - Force MIDI send (ignore cache) for clean display
 
-### [2.9.7] - 2025-01-11
+### [2.9.7] - 2025-11-11
 - Fixed LED persistence on mode switch
 - Added visual scroll position indicator (2-second display)
 
-### [2.9.6] - 2025-01-11
+### [2.9.6] - 2025-11-11
 - Support for absolute encoder mode (0-127)
 - Direction detection from value changes
 
-### [2.9.5] - 2025-01-11
+### [2.9.5] - 2025-11-11
 - Differentiated LED blink patterns
   - FAST BLINK (2.5Hz): Virtual page tracks not on current page
   - SLOW BLINK (1Hz): Virtual page + current page button (double function)
 
-### [2.9.4] - 2025-01-10
+### [2.9.4] - 2025-11-10
 - Virtual page membership LED indicator in PAGE mode
 
 ## [2.6.0] - Earlier
